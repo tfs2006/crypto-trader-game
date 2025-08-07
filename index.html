@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Volatile Crypto Trader 2.0</title>
+    
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Inter for a clean, modern look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    
+    <!-- Custom Styles -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0a192f; /* A deep, modern navy blue */
+        }
+        
+        /* Custom class for the neon glow effect */
+        .neon-glow {
+            box-shadow: 0 0 5px #64ffda, 0 0 10px #64ffda, 0 0 15px #64ffda;
+        }
+
+        /* Custom scrollbar for a better look */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a192f;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #172a45;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #304a6e;
+        }
+
+        /* Animation for the news ticker */
+        @keyframes ticker {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        .ticker-wrap {
+            width: 100%;
+            overflow: hidden;
+            padding: 10px 0;
+            background-color: rgba(100, 255, 218, 0.05);
+        }
+        .ticker-move {
+            display: inline-block;
+            white-space: nowrap;
+            animation: ticker 20s linear infinite;
+        }
+        
+        /* Modal styles for notifications */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .modal-backdrop.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-content {
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+        .modal-backdrop.visible .modal-content {
+            transform: scale(1);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 flex items-center justify-center min-h-screen p-4">
+
+    <div class="game-container w-full max-w-4xl mx-auto bg-[#172a45] rounded-2xl shadow-2xl p-6 md:p-8 border border-gray-700">
+        
+        <!-- Game Header -->
+        <div class="text-center mb-6">
+            <h1 class="text-3xl md:text-4xl font-bold text-white">
+                <span class="text-[#64ffda]">Volatile</span> Crypto Trader
+            </h1>
+            <p class="text-gray-400 mt-2">Buy low, sell high... or get rekt trying. 🚀</p>
+        </div>
+
+        <!-- News Ticker -->
+        <div class="ticker-wrap rounded-lg mb-6">
+            <div class="ticker-move">
+                <span id="news-ticker" class="text-[#64ffda] font-semibold">Market is stable... for now.</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Left Panel: Controls & Wallet -->
+            <div class="md:col-span-1 bg-[#0a192f] p-6 rounded-xl space-y-6">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-400 mb-3">Select Asset</h2>
+                    <div id="crypto-selector" class="grid grid-cols-3 gap-2">
+                        <!-- Crypto buttons will be generated here -->
+                    </div>
+                </div>
+
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-400 mb-3">Your Wallet</h2>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center bg-gray-800/50 p-3 rounded-lg">
+                            <span class="text-gray-400">Balance:</span>
+                            <span id="balance" class="font-bold text-white text-lg">$10,000.00</span>
+                        </div>
+                        <div class="flex justify-between items-center bg-gray-800/50 p-3 rounded-lg">
+                            <span class="text-gray-400">Asset Owned:</span>
+                            <span id="crypto-owned" class="font-bold text-white text-lg">0.0000</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-400 mb-3">Trade</h2>
+                    <div class="space-y-4">
+                        <input type="number" id="crypto-amount" min="0" placeholder="Enter amount" class="w-full bg-gray-800 border-2 border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-[#64ffda] transition-colors">
+                        <div class="grid grid-cols-2 gap-3">
+                            <button id="buy-btn" class="w-full bg-green-500/20 text-green-300 font-bold py-3 rounded-lg border-2 border-green-500/30 hover:bg-green-500/40 hover:border-green-500/50 transition-all duration-300">BUY</button>
+                            <button id="sell-btn" class="w-full bg-red-500/20 text-red-300 font-bold py-3 rounded-lg border-2 border-red-500/30 hover:bg-red-500/40 hover:border-red-500/50 transition-all duration-300">SELL</button>
+                        </div>
+                    </div>
+                </div>
+                 <button id="reset-btn" class="w-full mt-4 bg-gray-600/20 text-gray-400 font-bold py-2 rounded-lg border-2 border-gray-600/30 hover:bg-gray-600/40 hover:border-gray-500/50 transition-all duration-300 text-sm">Reset Game</button>
+            </div>
+
+            <!-- Right Panel: Chart & Info -->
+            <div class="md:col-span-2 bg-[#0a192f] p-6 rounded-xl flex flex-col">
+                <div class="flex justify-between items-baseline mb-4">
+                    <div>
+                        <span id="crypto-name" class="text-2xl font-bold text-white">Bitcoin</span>
+                        <span id="crypto-symbol" class="text-lg text-gray-500 ml-2">BTC</span>
+                    </div>
+                    <div class="text-right">
+                        <span id="current-price" class="text-3xl font-bold text-white">$0.00</span>
+                        <span id="price-change" class="ml-2 font-semibold text-gray-500">0.00%</span>
+                    </div>
+                </div>
+                
+                <!-- Price Chart -->
+                <div id="price-chart" class="w-full h-64 md:h-full flex-grow bg-gray-900/50 rounded-lg p-2 flex items-end gap-1 overflow-hidden">
+                    <!-- Price bars will be generated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Modal for Notifications -->
+    <div id="notification-modal" class="modal-backdrop">
+        <div class="modal-content bg-[#172a45] border border-[#64ffda] rounded-lg shadow-lg p-6 w-11/12 max-w-sm text-center">
+            <h3 id="modal-title" class="text-xl font-bold text-white mb-2">Notice</h3>
+            <p id="modal-message" class="text-gray-300 mb-6">This is a notification.</p>
+            <button id="modal-close-btn" class="bg-[#64ffda] text-[#0a192f] font-bold py-2 px-6 rounded-lg hover:opacity-80 transition-opacity">OK</button>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // --- GAME CONFIGURATION ---
+        const CONFIG = {
+            STARTING_BALANCE: 10000,
+            CHART_HISTORY_LENGTH: 60, // Number of price points to show on the chart
+            UPDATE_INTERVAL: 1500, // Price update frequency in ms
+            CRYPTO_ASSETS: {
+                BTC: { name: 'Bitcoin', price: 50000, volatility: 0.02, icon: '₿' },
+                ETH: { name: 'Ethereum', price: 3000, volatility: 0.04, icon: 'Ξ' },
+                DOGE: { name: 'Dogecoin', price: 0.5, volatility: 0.1, icon: 'Ð' }
+            },
+            NEWS_EVENTS: [
+                { message: "Tech billionaire tweets about DOGE! Prices surge!", effect: { DOGE: 1.5 } },
+                { message: "New regulation fears shake the market...", effect: { BTC: 0.85, ETH: 0.9 } },
+                { message: "Major corporation adopts Ethereum for smart contracts!", effect: { ETH: 1.3 } },
+                { message: "Bitcoin halving event creates supply shock!", effect: { BTC: 1.2 } },
+                { message: "A cute Shiba Inu video went viral. DOGE to the moon!", effect: { DOGE: 1.8 } },
+                { message: "Global economic downturn pushes investors to crypto.", effect: { BTC: 1.1, ETH: 1.05 } },
+                { message: "Quantum computing breakthrough threatens crypto security!", effect: { BTC: 0.7, ETH: 0.75, DOGE: 0.8 } }
+            ]
+        };
+
+        // --- GAME STATE ---
+        let state = {};
+
+        // --- DOM ELEMENTS ---
+        const elements = {
+            balance: document.getElementById('balance'),
+            cryptoOwned: document.getElementById('crypto-owned'),
+            currentPrice: document.getElementById('current-price'),
+            priceChange: document.getElementById('price-change'),
+            cryptoName: document.getElementById('crypto-name'),
+            cryptoSymbol: document.getElementById('crypto-symbol'),
+            priceChart: document.getElementById('price-chart'),
+            cryptoSelector: document.getElementById('crypto-selector'),
+            cryptoAmountInput: document.getElementById('crypto-amount'),
+            buyBtn: document.getElementById('buy-btn'),
+            sellBtn: document.getElementById('sell-btn'),
+            resetBtn: document.getElementById('reset-btn'),
+            newsTicker: document.getElementById('news-ticker'),
+            notificationModal: document.getElementById('notification-modal'),
+            modalTitle: document.getElementById('modal-title'),
+            modalMessage: document.getElementById('modal-message'),
+            modalCloseBtn: document.getElementById('modal-close-btn'),
+        };
+
+        // --- GAME LOGIC ---
+        const Game = {
+            init() {
+                this.reset();
+                this.setupEventListeners();
+                this.populateCryptoSelector();
+                this.selectCrypto(Object.keys(CONFIG.CRYPTO_ASSETS)[0]);
+                this.gameLoop = setInterval(() => this.update(), CONFIG.UPDATE_INTERVAL);
+            },
+
+            reset() {
+                state = {
+                    currentCrypto: 'BTC',
+                    balance: CONFIG.STARTING_BALANCE,
+                    prices: {},
+                    cryptoOwned: {},
+                    priceHistory: {}
+                };
+
+                for (const symbol in CONFIG.CRYPTO_ASSETS) {
+                    state.prices[symbol] = CONFIG.CRYPTO_ASSETS[symbol].price;
+                    state.cryptoOwned[symbol] = 0;
+                    state.priceHistory[symbol] = Array(CONFIG.CHART_HISTORY_LENGTH).fill(CONFIG.CRYPTO_ASSETS[symbol].price);
+                }
+                this.updateDisplay();
+            },
+
+            setupEventListeners() {
+                elements.buyBtn.addEventListener('click', () => this.buy());
+                elements.sellBtn.addEventListener('click', () => this.sell());
+                elements.resetBtn.addEventListener('click', () => {
+                    this.showNotification('Game Reset', 'Your portfolio has been reset to the starting values.');
+                    this.reset();
+                    this.selectCrypto(state.currentCrypto);
+                });
+                elements.cryptoSelector.addEventListener('click', (e) => {
+                    const button = e.target.closest('.crypto-button');
+                    if (button) {
+                        this.selectCrypto(button.dataset.crypto);
+                    }
+                });
+                elements.modalCloseBtn.addEventListener('click', () => this.hideNotification());
+                elements.notificationModal.addEventListener('click', (e) => {
+                    if (e.target === elements.notificationModal) {
+                        this.hideNotification();
+                    }
+                });
+            },
+
+            update() {
+                this.fluctuatePrices();
+                this.updateDisplay();
+            },
+
+            fluctuatePrices() {
+                // Random event chance
+                if (Math.random() < 0.05) { // 5% chance for a major news event
+                    const event = CONFIG.NEWS_EVENTS[Math.floor(Math.random() * CONFIG.NEWS_EVENTS.length)];
+                    elements.newsTicker.textContent = event.message;
+                    for (const symbol in event.effect) {
+                        if (state.prices[symbol]) {
+                            state.prices[symbol] *= event.effect[symbol];
+                        }
+                    }
+                } else {
+                    // Normal fluctuations
+                    for (const symbol in CONFIG.CRYPTO_ASSETS) {
+                        const volatility = CONFIG.CRYPTO_ASSETS[symbol].volatility;
+                        const changePercent = 2 * volatility * (Math.random() - 0.5);
+                        state.prices[symbol] *= (1 + changePercent);
+                        state.prices[symbol] = Math.max(0.01, state.prices[symbol]); // Prevent price from going to zero
+                    }
+                }
+
+                // Update price history for all cryptos
+                for (const symbol in state.prices) {
+                    state.priceHistory[symbol].push(state.prices[symbol]);
+                    if (state.priceHistory[symbol].length > CONFIG.CHART_HISTORY_LENGTH) {
+                        state.priceHistory[symbol].shift();
+                    }
+                }
+            },
+
+            buy() {
+                const amount = parseFloat(elements.cryptoAmountInput.value);
+                if (isNaN(amount) || amount <= 0) {
+                    return this.showNotification('Invalid Amount', 'Please enter a positive number to buy.');
+                }
+
+                const cost = state.prices[state.currentCrypto] * amount;
+                if (cost > state.balance) {
+                    return this.showNotification('Insufficient Funds', `You need ${this.formatCurrency(cost)} but only have ${this.formatCurrency(state.balance)}.`);
+                }
+
+                state.balance -= cost;
+                state.cryptoOwned[state.currentCrypto] += amount;
+                elements.cryptoAmountInput.value = '';
+                this.updateDisplay();
+            },
+
+            sell() {
+                const amount = parseFloat(elements.cryptoAmountInput.value);
+                if (isNaN(amount) || amount <= 0) {
+                    return this.showNotification('Invalid Amount', 'Please enter a positive number to sell.');
+                }
+
+                if (amount > state.cryptoOwned[state.currentCrypto]) {
+                    return this.showNotification('Not Enough Crypto', `You can't sell more ${state.currentCrypto} than you own.`);
+                }
+
+                const value = state.prices[state.currentCrypto] * amount;
+                state.balance += value;
+                state.cryptoOwned[state.currentCrypto] -= amount;
+                elements.cryptoAmountInput.value = '';
+                this.updateDisplay();
+            },
+
+            selectCrypto(symbol) {
+                state.currentCrypto = symbol;
+                this.updateDisplay();
+                this.updateCryptoSelectorUI();
+            },
+
+            // --- UI & DISPLAY ---
+            updateDisplay() {
+                const crypto = CONFIG.CRYPTO_ASSETS[state.currentCrypto];
+                const price = state.prices[state.currentCrypto];
+                const owned = state.cryptoOwned[state.currentCrypto];
+
+                elements.balance.textContent = this.formatCurrency(state.balance);
+                elements.cryptoOwned.textContent = owned.toFixed(4);
+                elements.currentPrice.textContent = this.formatCurrency(price);
+                elements.cryptoName.textContent = crypto.name;
+                elements.cryptoSymbol.textContent = state.currentCrypto;
+
+                this.updatePriceChange();
+                this.renderChart();
+            },
+
+            updatePriceChange() {
+                const history = state.priceHistory[state.currentCrypto];
+                if (history.length < 2) return;
+                const oldPrice = history[history.length - 2];
+                const newPrice = history[history.length - 1];
+                const change = ((newPrice - oldPrice) / oldPrice) * 100;
+
+                elements.priceChange.textContent = `${change.toFixed(2)}%`;
+                if (change >= 0) {
+                    elements.priceChange.classList.remove('text-red-400');
+                    elements.priceChange.classList.add('text-green-400');
+                } else {
+                    elements.priceChange.classList.remove('text-green-400');
+                    elements.priceChange.classList.add('text-red-400');
+                }
+            },
+
+            populateCryptoSelector() {
+                elements.cryptoSelector.innerHTML = '';
+                for (const symbol in CONFIG.CRYPTO_ASSETS) {
+                    const crypto = CONFIG.CRYPTO_ASSETS[symbol];
+                    const button = document.createElement('button');
+                    button.className = 'crypto-button p-3 rounded-lg font-bold transition-colors duration-200';
+                    button.dataset.crypto = symbol;
+                    button.textContent = symbol;
+                    elements.cryptoSelector.appendChild(button);
+                }
+            },
+            
+            updateCryptoSelectorUI() {
+                document.querySelectorAll('.crypto-button').forEach(btn => {
+                    if (btn.dataset.crypto === state.currentCrypto) {
+                        btn.classList.add('bg-[#64ffda]', 'text-[#0a192f]');
+                        btn.classList.remove('bg-gray-800/50', 'text-gray-300', 'hover:bg-gray-700/70');
+                    } else {
+                        btn.classList.remove('bg-[#64ffda]', 'text-[#0a192f]');
+                        btn.classList.add('bg-gray-800/50', 'text-gray-300', 'hover:bg-gray-700/70');
+                    }
+                });
+            },
+
+            renderChart() {
+                elements.priceChart.innerHTML = '';
+                const history = state.priceHistory[state.currentCrypto];
+                const maxPrice = Math.max(...history);
+                const minPrice = Math.min(...history);
+
+                history.forEach(price => {
+                    const bar = document.createElement('div');
+                    const heightPercent = maxPrice === minPrice ? 50 : ((price - minPrice) / (maxPrice - minPrice)) * 100;
+                    bar.style.height = `${Math.max(1, heightPercent)}%`;
+                    bar.className = 'w-full rounded-sm transition-all duration-300 ease-out';
+                    
+                    // Color the bar based on its relation to the previous bar
+                    const lastPrice = history[history.indexOf(price) - 1] || price;
+                    bar.style.backgroundColor = price >= lastPrice ? '#22c55e' : '#ef4444'; // green or red
+                    
+                    elements.priceChart.appendChild(bar);
+                });
+            },
+
+            showNotification(title, message) {
+                elements.modalTitle.textContent = title;
+                elements.modalMessage.textContent = message;
+                elements.notificationModal.classList.add('visible');
+            },
+
+            hideNotification() {
+                elements.notificationModal.classList.remove('visible');
+            },
+
+            // --- UTILITIES ---
+            formatCurrency(value) {
+                return value.toLocaleString('en-US', {
+                    style: 'currency',
+                    currency: 'USD',
+                    maximumFractionDigits: value < 1 ? 6 : 2
+                });
+            }
+        };
+
+        Game.init();
+    });
+    </script>
+</body>
+</html>
