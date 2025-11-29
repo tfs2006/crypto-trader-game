@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Volatile Crypto Trader 2.0</title>
+    <title>Volatile Crypto Trader 3.0</title>
     
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -17,12 +17,21 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #0a192f; /* A deep, modern navy blue */
+            background: linear-gradient(135deg, #0a192f 0%, #0d1f3c 50%, #0a192f 100%);
+            background-attachment: fixed;
         }
         
         /* Custom class for the neon glow effect */
         .neon-glow {
             box-shadow: 0 0 5px #64ffda, 0 0 10px #64ffda, 0 0 15px #64ffda;
+        }
+        
+        .neon-glow-green {
+            box-shadow: 0 0 10px rgba(34, 197, 94, 0.5), 0 0 20px rgba(34, 197, 94, 0.3);
+        }
+        
+        .neon-glow-red {
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5), 0 0 20px rgba(239, 68, 68, 0.3);
         }
 
         /* Custom scrollbar for a better look */
@@ -49,7 +58,7 @@
             width: 100%;
             overflow: hidden;
             padding: 10px 0;
-            background-color: rgba(100, 255, 218, 0.05);
+            background: linear-gradient(90deg, rgba(100, 255, 218, 0.05) 0%, rgba(100, 255, 218, 0.1) 50%, rgba(100, 255, 218, 0.05) 100%);
         }
         .ticker-move {
             display: inline-block;
@@ -64,7 +73,8 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.6);
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -78,98 +88,357 @@
             pointer-events: auto;
         }
         .modal-content {
-            transform: scale(0.9);
+            transform: scale(0.9) translateY(20px);
             transition: transform 0.3s ease;
         }
         .modal-backdrop.visible .modal-content {
-            transform: scale(1);
+            transform: scale(1) translateY(0);
+        }
+        
+        /* Pulse animation for price changes */
+        @keyframes pulse-green {
+            0%, 100% { background-color: rgba(34, 197, 94, 0); }
+            50% { background-color: rgba(34, 197, 94, 0.2); }
+        }
+        @keyframes pulse-red {
+            0%, 100% { background-color: rgba(239, 68, 68, 0); }
+            50% { background-color: rgba(239, 68, 68, 0.2); }
+        }
+        .pulse-green { animation: pulse-green 0.5s ease; }
+        .pulse-red { animation: pulse-red 0.5s ease; }
+        
+        /* Floating animation for achievements */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        .achievement-unlocked {
+            animation: float 2s ease-in-out infinite;
+        }
+        
+        /* Candlestick chart styles */
+        .candlestick {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 8px;
+        }
+        .candlestick-wick {
+            width: 2px;
+        }
+        .candlestick-body {
+            width: 100%;
+            min-height: 2px;
+            border-radius: 1px;
+        }
+        
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            border-radius: 8px;
+            z-index: 100;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+        .toast.show {
+            transform: translateX(0);
+        }
+        
+        /* Sparkle effect */
+        @keyframes sparkle {
+            0%, 100% { opacity: 0; transform: scale(0); }
+            50% { opacity: 1; transform: scale(1); }
+        }
+        
+        /* Market sentiment gauge */
+        .gauge-fill {
+            transition: width 0.5s ease;
+        }
+        
+        /* Tab styles */
+        .tab-btn {
+            transition: all 0.2s ease;
+        }
+        .tab-btn.active {
+            background: linear-gradient(135deg, #64ffda 0%, #4fd1c5 100%);
+            color: #0a192f;
+        }
+        
+        /* Trading history scroll */
+        .trade-history {
+            max-height: 150px;
+            overflow-y: auto;
         }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-200 flex items-center justify-center min-h-screen p-4">
+<body class="bg-gray-900 text-gray-200 min-h-screen p-4">
 
-    <div class="game-container w-full max-w-4xl mx-auto bg-[#172a45] rounded-2xl shadow-2xl p-6 md:p-8 border border-gray-700">
+    <!-- Toast Notification -->
+    <div id="toast" class="toast bg-green-500 text-white font-semibold shadow-lg">
+        <span id="toast-message">Trade executed!</span>
+    </div>
+
+    <div class="game-container w-full max-w-6xl mx-auto">
         
         <!-- Game Header -->
         <div class="text-center mb-6">
-            <h1 class="text-3xl md:text-4xl font-bold text-white">
+            <h1 class="text-3xl md:text-5xl font-bold text-white mb-2">
                 <span class="text-[#64ffda]">Volatile</span> Crypto Trader
+                <span class="text-sm align-top bg-[#64ffda] text-[#0a192f] px-2 py-1 rounded-full ml-2">3.0</span>
             </h1>
             <p class="text-gray-400 mt-2">Buy low, sell high... or get rekt trying. 🚀</p>
         </div>
 
-        <!-- News Ticker -->
-        <div class="ticker-wrap rounded-lg mb-6">
-            <div class="ticker-move">
-                <span id="news-ticker" class="text-[#64ffda] font-semibold">Market is stable... for now.</span>
+        <!-- Portfolio Summary Bar -->
+        <div class="bg-[#172a45] rounded-xl p-4 mb-4 border border-gray-700">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="text-center">
+                    <p class="text-gray-400 text-sm">Total Portfolio Value</p>
+                    <p id="total-portfolio" class="text-2xl font-bold text-white">$10,000.00</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-gray-400 text-sm">Total P/L</p>
+                    <p id="total-pnl" class="text-2xl font-bold text-green-400">+$0.00</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-gray-400 text-sm">P/L %</p>
+                    <p id="total-pnl-percent" class="text-2xl font-bold text-green-400">+0.00%</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-gray-400 text-sm">Market Sentiment</p>
+                    <div class="flex items-center justify-center gap-2 mt-1">
+                        <span class="text-red-400 text-xs">Fear</span>
+                        <div class="w-24 h-3 bg-gray-700 rounded-full overflow-hidden">
+                            <div id="sentiment-gauge" class="gauge-fill h-full bg-gradient-to-r from-red-500 via-yellow-500 to-green-500" style="width: 50%"></div>
+                        </div>
+                        <span class="text-green-400 text-xs">Greed</span>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- News Ticker -->
+        <div class="ticker-wrap rounded-lg mb-4 border border-[#64ffda]/20">
+            <div class="ticker-move">
+                <span id="news-ticker" class="text-[#64ffda] font-semibold">📰 Market is stable... for now. | 🔥 Welcome to Volatile Crypto Trader 3.0!</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
             <!-- Left Panel: Controls & Wallet -->
-            <div class="md:col-span-1 bg-[#0a192f] p-6 rounded-xl space-y-6">
-                <div>
-                    <h2 class="text-lg font-semibold text-gray-400 mb-3">Select Asset</h2>
-                    <div id="crypto-selector" class="grid grid-cols-3 gap-2">
+            <div class="lg:col-span-1 space-y-4">
+                <!-- Crypto Selector -->
+                <div class="bg-[#172a45] p-4 rounded-xl border border-gray-700">
+                    <h2 class="text-lg font-semibold text-gray-400 mb-3 flex items-center gap-2">
+                        <span>📊</span> Select Asset
+                    </h2>
+                    <div id="crypto-selector" class="grid grid-cols-2 gap-2">
                         <!-- Crypto buttons will be generated here -->
                     </div>
                 </div>
 
-                <div>
-                    <h2 class="text-lg font-semibold text-gray-400 mb-3">Your Wallet</h2>
+                <!-- Wallet -->
+                <div class="bg-[#172a45] p-4 rounded-xl border border-gray-700">
+                    <h2 class="text-lg font-semibold text-gray-400 mb-3 flex items-center gap-2">
+                        <span>💰</span> Your Wallet
+                    </h2>
                     <div class="space-y-3">
-                        <div class="flex justify-between items-center bg-gray-800/50 p-3 rounded-lg">
-                            <span class="text-gray-400">Balance:</span>
+                        <div class="flex justify-between items-center bg-[#0a192f] p-3 rounded-lg">
+                            <span class="text-gray-400">Cash:</span>
                             <span id="balance" class="font-bold text-white text-lg">$10,000.00</span>
                         </div>
-                        <div class="flex justify-between items-center bg-gray-800/50 p-3 rounded-lg">
-                            <span class="text-gray-400">Asset Owned:</span>
+                        <div class="flex justify-between items-center bg-[#0a192f] p-3 rounded-lg">
+                            <span class="text-gray-400">Asset Held:</span>
                             <span id="crypto-owned" class="font-bold text-white text-lg">0.0000</span>
+                        </div>
+                        <div class="flex justify-between items-center bg-[#0a192f] p-3 rounded-lg">
+                            <span class="text-gray-400">Asset Value:</span>
+                            <span id="asset-value" class="font-bold text-[#64ffda] text-lg">$0.00</span>
                         </div>
                     </div>
                 </div>
                 
-                <div>
-                    <h2 class="text-lg font-semibold text-gray-400 mb-3">Trade</h2>
+                <!-- Trade Panel -->
+                <div class="bg-[#172a45] p-4 rounded-xl border border-gray-700">
+                    <h2 class="text-lg font-semibold text-gray-400 mb-3 flex items-center gap-2">
+                        <span>⚡</span> Quick Trade
+                    </h2>
                     <div class="space-y-4">
-                        <input type="number" id="crypto-amount" min="0" placeholder="Enter amount" class="w-full bg-gray-800 border-2 border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-[#64ffda] transition-colors">
+                        <input type="number" id="crypto-amount" min="0" step="any" placeholder="Enter amount" class="w-full bg-[#0a192f] border-2 border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-[#64ffda] transition-colors">
+                        
+                        <!-- Quick Amount Buttons -->
+                        <div class="grid grid-cols-4 gap-2">
+                            <button class="quick-amount-btn bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 text-xs py-2 rounded transition-colors" data-percent="25">25%</button>
+                            <button class="quick-amount-btn bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 text-xs py-2 rounded transition-colors" data-percent="50">50%</button>
+                            <button class="quick-amount-btn bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 text-xs py-2 rounded transition-colors" data-percent="75">75%</button>
+                            <button class="quick-amount-btn bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 text-xs py-2 rounded transition-colors" data-percent="100">MAX</button>
+                        </div>
+                        
                         <div class="grid grid-cols-2 gap-3">
-                            <button id="buy-btn" class="w-full bg-green-500/20 text-green-300 font-bold py-3 rounded-lg border-2 border-green-500/30 hover:bg-green-500/40 hover:border-green-500/50 transition-all duration-300">BUY</button>
-                            <button id="sell-btn" class="w-full bg-red-500/20 text-red-300 font-bold py-3 rounded-lg border-2 border-red-500/30 hover:bg-red-500/40 hover:border-red-500/50 transition-all duration-300">SELL</button>
+                            <button id="buy-btn" class="w-full bg-green-500/20 text-green-300 font-bold py-3 rounded-lg border-2 border-green-500/30 hover:bg-green-500/40 hover:border-green-500/50 hover:neon-glow-green transition-all duration-300 flex items-center justify-center gap-2">
+                                <span>📈</span> BUY
+                            </button>
+                            <button id="sell-btn" class="w-full bg-red-500/20 text-red-300 font-bold py-3 rounded-lg border-2 border-red-500/30 hover:bg-red-500/40 hover:border-red-500/50 hover:neon-glow-red transition-all duration-300 flex items-center justify-center gap-2">
+                                <span>📉</span> SELL
+                            </button>
                         </div>
                     </div>
                 </div>
-                 <button id="reset-btn" class="w-full mt-4 bg-gray-600/20 text-gray-400 font-bold py-2 rounded-lg border-2 border-gray-600/30 hover:bg-gray-600/40 hover:border-gray-500/50 transition-all duration-300 text-sm">Reset Game</button>
+                
+                <!-- Sound & Reset -->
+                <div class="bg-[#172a45] p-4 rounded-xl border border-gray-700">
+                    <div class="flex gap-2">
+                        <button id="sound-btn" class="flex-1 bg-gray-600/20 text-gray-400 font-bold py-2 rounded-lg border-2 border-gray-600/30 hover:bg-gray-600/40 transition-all duration-300 text-sm">
+                            🔊 Sound
+                        </button>
+                        <button id="reset-btn" class="flex-1 bg-gray-600/20 text-gray-400 font-bold py-2 rounded-lg border-2 border-gray-600/30 hover:bg-gray-600/40 transition-all duration-300 text-sm">
+                            🔄 Reset
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            <!-- Right Panel: Chart & Info -->
-            <div class="md:col-span-2 bg-[#0a192f] p-6 rounded-xl flex flex-col">
-                <div class="flex justify-between items-baseline mb-4">
+            <!-- Middle Panel: Chart -->
+            <div class="lg:col-span-2 bg-[#172a45] p-4 rounded-xl flex flex-col border border-gray-700">
+                <div class="flex justify-between items-start mb-4">
                     <div>
-                        <span id="crypto-name" class="text-2xl font-bold text-white">Bitcoin</span>
-                        <span id="crypto-symbol" class="text-lg text-gray-500 ml-2">BTC</span>
+                        <div class="flex items-center gap-2">
+                            <span id="crypto-icon" class="text-3xl">₿</span>
+                            <span id="crypto-name" class="text-2xl font-bold text-white">Bitcoin</span>
+                            <span id="crypto-symbol" class="text-lg text-gray-500">BTC</span>
+                        </div>
+                        <div class="flex items-center gap-2 mt-1">
+                            <span class="text-xs px-2 py-1 rounded bg-gray-700 text-gray-400">Vol: <span id="volatility-badge">Low</span></span>
+                            <span id="trend-indicator" class="text-xs px-2 py-1 rounded bg-green-500/20 text-green-400">↑ Bullish</span>
+                        </div>
                     </div>
                     <div class="text-right">
-                        <span id="current-price" class="text-3xl font-bold text-white">$0.00</span>
-                        <span id="price-change" class="ml-2 font-semibold text-gray-500">0.00%</span>
+                        <div id="price-container" class="rounded-lg px-3 py-1 transition-colors">
+                            <span id="current-price" class="text-3xl font-bold text-white">$0.00</span>
+                        </div>
+                        <div class="flex items-center justify-end gap-2 mt-1">
+                            <span id="price-change" class="font-semibold text-gray-500">0.00%</span>
+                            <span id="price-change-24h" class="text-xs text-gray-500">(24h: +0.00%)</span>
+                        </div>
                     </div>
+                </div>
+                
+                <!-- Chart Type Toggle -->
+                <div class="flex gap-2 mb-3">
+                    <button id="chart-bar" class="tab-btn active px-3 py-1 rounded text-sm font-semibold">Bar</button>
+                    <button id="chart-candle" class="tab-btn px-3 py-1 rounded text-sm font-semibold bg-gray-700 text-gray-300">Candle</button>
                 </div>
                 
                 <!-- Price Chart -->
-                <div id="price-chart" class="w-full h-64 md:h-full flex-grow bg-gray-900/50 rounded-lg p-2 flex items-end gap-1 overflow-hidden">
+                <div id="price-chart" class="w-full h-64 lg:h-80 flex-grow bg-[#0a192f] rounded-lg p-2 flex items-end gap-[2px] overflow-hidden">
                     <!-- Price bars will be generated here -->
                 </div>
+                
+                <!-- Price Stats -->
+                <div class="grid grid-cols-4 gap-2 mt-3">
+                    <div class="bg-[#0a192f] p-2 rounded text-center">
+                        <p class="text-xs text-gray-500">High</p>
+                        <p id="price-high" class="text-sm font-bold text-green-400">$0.00</p>
+                    </div>
+                    <div class="bg-[#0a192f] p-2 rounded text-center">
+                        <p class="text-xs text-gray-500">Low</p>
+                        <p id="price-low" class="text-sm font-bold text-red-400">$0.00</p>
+                    </div>
+                    <div class="bg-[#0a192f] p-2 rounded text-center">
+                        <p class="text-xs text-gray-500">Avg</p>
+                        <p id="price-avg" class="text-sm font-bold text-[#64ffda]">$0.00</p>
+                    </div>
+                    <div class="bg-[#0a192f] p-2 rounded text-center">
+                        <p class="text-xs text-gray-500">Volume</p>
+                        <p id="trade-volume" class="text-sm font-bold text-white">$0</p>
+                    </div>
+                </div>
             </div>
+
+            <!-- Right Panel: History & Achievements -->
+            <div class="lg:col-span-1 space-y-4">
+                <!-- Trading History -->
+                <div class="bg-[#172a45] p-4 rounded-xl border border-gray-700">
+                    <h2 class="text-lg font-semibold text-gray-400 mb-3 flex items-center gap-2">
+                        <span>📜</span> Trade History
+                    </h2>
+                    <div id="trade-history" class="trade-history space-y-2">
+                        <p class="text-gray-500 text-sm text-center py-4">No trades yet</p>
+                    </div>
+                </div>
+                
+                <!-- Holdings Overview -->
+                <div class="bg-[#172a45] p-4 rounded-xl border border-gray-700">
+                    <h2 class="text-lg font-semibold text-gray-400 mb-3 flex items-center gap-2">
+                        <span>📦</span> All Holdings
+                    </h2>
+                    <div id="holdings-list" class="space-y-2">
+                        <!-- Holdings will be generated here -->
+                    </div>
+                </div>
+                
+                <!-- Achievements -->
+                <div class="bg-[#172a45] p-4 rounded-xl border border-gray-700">
+                    <h2 class="text-lg font-semibold text-gray-400 mb-3 flex items-center gap-2">
+                        <span>🏆</span> Achievements
+                    </h2>
+                    <div id="achievements" class="grid grid-cols-4 gap-2">
+                        <!-- Achievements will be generated here -->
+                    </div>
+                </div>
+                
+                <!-- Game Stats -->
+                <div class="bg-[#172a45] p-4 rounded-xl border border-gray-700">
+                    <h2 class="text-lg font-semibold text-gray-400 mb-3 flex items-center gap-2">
+                        <span>📊</span> Stats
+                    </h2>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Total Trades:</span>
+                            <span id="stat-trades" class="text-white font-semibold">0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Winning Trades:</span>
+                            <span id="stat-wins" class="text-green-400 font-semibold">0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Biggest Gain:</span>
+                            <span id="stat-best" class="text-green-400 font-semibold">$0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Biggest Loss:</span>
+                            <span id="stat-worst" class="text-red-400 font-semibold">$0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="text-center mt-6 text-gray-500 text-sm">
+            <p>⚠️ This is a simulation game. Not financial advice. Trade responsibly!</p>
         </div>
     </div>
 
     <!-- Custom Modal for Notifications -->
     <div id="notification-modal" class="modal-backdrop">
-        <div class="modal-content bg-[#172a45] border border-[#64ffda] rounded-lg shadow-lg p-6 w-11/12 max-w-sm text-center">
+        <div class="modal-content bg-[#172a45] border border-[#64ffda] rounded-xl shadow-2xl p-6 w-11/12 max-w-md text-center">
+            <div id="modal-icon" class="text-5xl mb-4">📢</div>
             <h3 id="modal-title" class="text-xl font-bold text-white mb-2">Notice</h3>
             <p id="modal-message" class="text-gray-300 mb-6">This is a notification.</p>
-            <button id="modal-close-btn" class="bg-[#64ffda] text-[#0a192f] font-bold py-2 px-6 rounded-lg hover:opacity-80 transition-opacity">OK</button>
+            <button id="modal-close-btn" class="bg-[#64ffda] text-[#0a192f] font-bold py-2 px-8 rounded-lg hover:opacity-80 transition-opacity">OK</button>
         </div>
+    </div>
+    
+    <!-- Achievement Popup -->
+    <div id="achievement-popup" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-[#172a45] border-2 border-yellow-500 rounded-xl p-6 text-center z-50 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="achievement-unlocked text-6xl mb-2" id="achievement-icon">🏆</div>
+        <h3 class="text-xl font-bold text-yellow-400 mb-1">Achievement Unlocked!</h3>
+        <p id="achievement-name" class="text-white font-semibold">First Trade</p>
+        <p id="achievement-desc" class="text-gray-400 text-sm mt-1">Complete your first trade</p>
     </div>
 
     <script>
@@ -177,82 +446,280 @@
         // --- GAME CONFIGURATION ---
         const CONFIG = {
             STARTING_BALANCE: 10000,
-            CHART_HISTORY_LENGTH: 60, // Number of price points to show on the chart
-            UPDATE_INTERVAL: 1500, // Price update frequency in ms
+            CHART_HISTORY_LENGTH: 60,
+            UPDATE_INTERVAL: 1500,
             CRYPTO_ASSETS: {
-                BTC: { name: 'Bitcoin', price: 50000, volatility: 0.02, icon: '₿' },
-                ETH: { name: 'Ethereum', price: 3000, volatility: 0.04, icon: 'Ξ' },
-                DOGE: { name: 'Dogecoin', price: 0.5, volatility: 0.1, icon: 'Ð' }
+                BTC: { name: 'Bitcoin', price: 50000, volatility: 0.02, icon: '₿', color: '#f7931a' },
+                ETH: { name: 'Ethereum', price: 3000, volatility: 0.04, icon: 'Ξ', color: '#627eea' },
+                DOGE: { name: 'Dogecoin', price: 0.5, volatility: 0.1, icon: 'Ð', color: '#c3a634' },
+                SOL: { name: 'Solana', price: 150, volatility: 0.06, icon: '◎', color: '#00ffa3' },
+                ADA: { name: 'Cardano', price: 2.5, volatility: 0.05, icon: '₳', color: '#0033ad' },
+                XRP: { name: 'Ripple', price: 1.2, volatility: 0.07, icon: '✕', color: '#23292f' }
             },
             NEWS_EVENTS: [
-                { message: "Tech billionaire tweets about DOGE! Prices surge!", effect: { DOGE: 1.5 } },
-                { message: "New regulation fears shake the market...", effect: { BTC: 0.85, ETH: 0.9 } },
-                { message: "Major corporation adopts Ethereum for smart contracts!", effect: { ETH: 1.3 } },
-                { message: "Bitcoin halving event creates supply shock!", effect: { BTC: 1.2 } },
-                { message: "A cute Shiba Inu video went viral. DOGE to the moon!", effect: { DOGE: 1.8 } },
-                { message: "Global economic downturn pushes investors to crypto.", effect: { BTC: 1.1, ETH: 1.05 } },
-                { message: "Quantum computing breakthrough threatens crypto security!", effect: { BTC: 0.7, ETH: 0.75, DOGE: 0.8 } }
-            ]
+                { message: "🚀 Tech billionaire tweets about DOGE! Prices surge!", effect: { DOGE: 1.5 }, sentiment: 20 },
+                { message: "⚠️ New regulation fears shake the market...", effect: { BTC: 0.85, ETH: 0.9, SOL: 0.88 }, sentiment: -30 },
+                { message: "📈 Major corporation adopts Ethereum for smart contracts!", effect: { ETH: 1.3 }, sentiment: 15 },
+                { message: "⛏️ Bitcoin halving event creates supply shock!", effect: { BTC: 1.2 }, sentiment: 25 },
+                { message: "🐕 A cute Shiba Inu video went viral. DOGE to the moon!", effect: { DOGE: 1.8 }, sentiment: 10 },
+                { message: "💹 Global economic downturn pushes investors to crypto.", effect: { BTC: 1.1, ETH: 1.05 }, sentiment: 5 },
+                { message: "🔓 Quantum computing breakthrough threatens crypto security!", effect: { BTC: 0.7, ETH: 0.75, DOGE: 0.8 }, sentiment: -40 },
+                { message: "🏦 Major bank announces crypto custody services!", effect: { BTC: 1.15, ETH: 1.1 }, sentiment: 20 },
+                { message: "⚡ Solana processes 50,000 TPS in stress test!", effect: { SOL: 1.4 }, sentiment: 15 },
+                { message: "🌊 XRP wins major lawsuit! Regulatory clarity achieved!", effect: { XRP: 1.6 }, sentiment: 25 },
+                { message: "🔥 NFT market crashes, affecting related tokens!", effect: { ETH: 0.9, SOL: 0.85 }, sentiment: -20 },
+                { message: "🏛️ Government announces crypto tax benefits!", effect: { BTC: 1.1, ETH: 1.1, SOL: 1.1, ADA: 1.1 }, sentiment: 30 },
+                { message: "💥 Flash crash! Whales dumping positions!", effect: { BTC: 0.8, ETH: 0.82, DOGE: 0.7 }, sentiment: -35 },
+                { message: "🎮 Major gaming company integrates ADA for in-game purchases!", effect: { ADA: 1.35 }, sentiment: 15 },
+                { message: "📱 New crypto wallet reaches 100M downloads!", effect: { BTC: 1.05, ETH: 1.08 }, sentiment: 10 }
+            ],
+            ACHIEVEMENTS: {
+                firstTrade: { name: 'First Trade', desc: 'Complete your first trade', icon: '🎯', unlocked: false },
+                bigSpender: { name: 'Big Spender', desc: 'Make a single trade worth $5,000+', icon: '💸', unlocked: false },
+                diversified: { name: 'Diversified', desc: 'Hold 3+ different cryptocurrencies', icon: '🎨', unlocked: false },
+                millionaire: { name: 'Millionaire', desc: 'Reach $1,000,000 portfolio value', icon: '🤑', unlocked: false },
+                dayTrader: { name: 'Day Trader', desc: 'Complete 50 trades', icon: '📊', unlocked: false },
+                diamondHands: { name: 'Diamond Hands', desc: 'Hold through a 20% drop', icon: '💎', unlocked: false },
+                rekt: { name: 'REKT', desc: 'Lose 50% of your portfolio', icon: '💀', unlocked: false },
+                whale: { name: 'Whale', desc: 'Own 1+ BTC', icon: '🐋', unlocked: false },
+                hodler: { name: 'HODLer', desc: 'Play for 5 minutes without selling', icon: '🦍', unlocked: false },
+                moonshot: { name: 'Moonshot', desc: 'Make 100% profit on a single trade', icon: '🌙', unlocked: false },
+                paperHands: { name: 'Paper Hands', desc: 'Sell at a loss 5 times', icon: '🧻', unlocked: false },
+                allIn: { name: 'All In', desc: 'Put 100% of balance in one coin', icon: '🎰', unlocked: false }
+            }
         };
 
         // --- GAME STATE ---
         let state = {};
+        let chartType = 'bar';
+        let soundEnabled = true;
+        let lastPrices = {};
+
+        // --- AUDIO CONTEXT FOR SOUNDS ---
+        const AudioSystem = {
+            ctx: null,
+            init() {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            },
+            play(type) {
+                if (!soundEnabled || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                
+                if (type === 'buy') {
+                    osc.frequency.setValueAtTime(523.25, this.ctx.currentTime); // C5
+                    osc.frequency.setValueAtTime(659.25, this.ctx.currentTime + 0.1); // E5
+                    osc.frequency.setValueAtTime(783.99, this.ctx.currentTime + 0.2); // G5
+                } else if (type === 'sell') {
+                    osc.frequency.setValueAtTime(783.99, this.ctx.currentTime); // G5
+                    osc.frequency.setValueAtTime(659.25, this.ctx.currentTime + 0.1); // E5
+                    osc.frequency.setValueAtTime(523.25, this.ctx.currentTime + 0.2); // C5
+                } else if (type === 'achievement') {
+                    osc.frequency.setValueAtTime(523.25, this.ctx.currentTime);
+                    osc.frequency.setValueAtTime(659.25, this.ctx.currentTime + 0.1);
+                    osc.frequency.setValueAtTime(783.99, this.ctx.currentTime + 0.2);
+                    osc.frequency.setValueAtTime(1046.50, this.ctx.currentTime + 0.3);
+                } else if (type === 'error') {
+                    osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+                    osc.frequency.setValueAtTime(150, this.ctx.currentTime + 0.1);
+                }
+                
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.exponentialDecayTo = (v, t) => gain.gain.setTargetAtTime(v, t, 0.1);
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.4);
+                
+                osc.start(this.ctx.currentTime);
+                osc.stop(this.ctx.currentTime + 0.4);
+            }
+        };
 
         // --- DOM ELEMENTS ---
         const elements = {
             balance: document.getElementById('balance'),
             cryptoOwned: document.getElementById('crypto-owned'),
+            assetValue: document.getElementById('asset-value'),
             currentPrice: document.getElementById('current-price'),
             priceChange: document.getElementById('price-change'),
+            priceChange24h: document.getElementById('price-change-24h'),
+            priceContainer: document.getElementById('price-container'),
             cryptoName: document.getElementById('crypto-name'),
             cryptoSymbol: document.getElementById('crypto-symbol'),
+            cryptoIcon: document.getElementById('crypto-icon'),
+            volatilityBadge: document.getElementById('volatility-badge'),
+            trendIndicator: document.getElementById('trend-indicator'),
             priceChart: document.getElementById('price-chart'),
             cryptoSelector: document.getElementById('crypto-selector'),
             cryptoAmountInput: document.getElementById('crypto-amount'),
             buyBtn: document.getElementById('buy-btn'),
             sellBtn: document.getElementById('sell-btn'),
             resetBtn: document.getElementById('reset-btn'),
+            soundBtn: document.getElementById('sound-btn'),
             newsTicker: document.getElementById('news-ticker'),
             notificationModal: document.getElementById('notification-modal'),
             modalTitle: document.getElementById('modal-title'),
             modalMessage: document.getElementById('modal-message'),
+            modalIcon: document.getElementById('modal-icon'),
             modalCloseBtn: document.getElementById('modal-close-btn'),
+            totalPortfolio: document.getElementById('total-portfolio'),
+            totalPnl: document.getElementById('total-pnl'),
+            totalPnlPercent: document.getElementById('total-pnl-percent'),
+            sentimentGauge: document.getElementById('sentiment-gauge'),
+            tradeHistory: document.getElementById('trade-history'),
+            holdingsList: document.getElementById('holdings-list'),
+            achievements: document.getElementById('achievements'),
+            achievementPopup: document.getElementById('achievement-popup'),
+            achievementIcon: document.getElementById('achievement-icon'),
+            achievementName: document.getElementById('achievement-name'),
+            achievementDesc: document.getElementById('achievement-desc'),
+            priceHigh: document.getElementById('price-high'),
+            priceLow: document.getElementById('price-low'),
+            priceAvg: document.getElementById('price-avg'),
+            tradeVolume: document.getElementById('trade-volume'),
+            statTrades: document.getElementById('stat-trades'),
+            statWins: document.getElementById('stat-wins'),
+            statBest: document.getElementById('stat-best'),
+            statWorst: document.getElementById('stat-worst'),
+            chartBar: document.getElementById('chart-bar'),
+            chartCandle: document.getElementById('chart-candle'),
+            toast: document.getElementById('toast'),
+            toastMessage: document.getElementById('toast-message')
         };
 
         // --- GAME LOGIC ---
         const Game = {
             init() {
-                this.reset();
+                this.loadGame();
                 this.setupEventListeners();
                 this.populateCryptoSelector();
-                this.selectCrypto(Object.keys(CONFIG.CRYPTO_ASSETS)[0]);
+                this.selectCrypto(state.currentCrypto || Object.keys(CONFIG.CRYPTO_ASSETS)[0]);
+                this.renderAchievements();
+                this.updateHoldingsList();
+                this.renderTradeHistory();
                 this.gameLoop = setInterval(() => this.update(), CONFIG.UPDATE_INTERVAL);
+                
+                // Start HODL timer
+                this.hodlTimer = setInterval(() => {
+                    if (state.lastSellTime) {
+                        const timeSinceSell = Date.now() - state.lastSellTime;
+                        if (timeSinceSell >= 300000) { // 5 minutes
+                            this.checkAchievement('hodler');
+                        }
+                    }
+                }, 10000);
             },
 
-            reset() {
+            loadGame() {
+                const saved = localStorage.getItem('cryptoTraderSave');
+                if (saved) {
+                    try {
+                        const parsed = JSON.parse(saved);
+                        state = parsed;
+                        // Restore achievements
+                        if (parsed.achievements) {
+                            for (const key in parsed.achievements) {
+                                if (CONFIG.ACHIEVEMENTS[key]) {
+                                    CONFIG.ACHIEVEMENTS[key].unlocked = parsed.achievements[key];
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        this.resetState();
+                    }
+                } else {
+                    this.resetState();
+                }
+            },
+
+            saveGame() {
+                const saveData = {
+                    ...state,
+                    achievements: {}
+                };
+                for (const key in CONFIG.ACHIEVEMENTS) {
+                    saveData.achievements[key] = CONFIG.ACHIEVEMENTS[key].unlocked;
+                }
+                localStorage.setItem('cryptoTraderSave', JSON.stringify(saveData));
+            },
+
+            resetState() {
                 state = {
                     currentCrypto: 'BTC',
                     balance: CONFIG.STARTING_BALANCE,
                     prices: {},
                     cryptoOwned: {},
-                    priceHistory: {}
+                    priceHistory: {},
+                    candleData: {},
+                    tradeHistory: [],
+                    stats: {
+                        totalTrades: 0,
+                        winningTrades: 0,
+                        biggestGain: 0,
+                        biggestLoss: 0,
+                        lossCount: 0
+                    },
+                    sentiment: 50,
+                    volume: 0,
+                    purchasePrices: {},
+                    lastSellTime: null,
+                    peakPortfolioValue: CONFIG.STARTING_BALANCE
                 };
 
                 for (const symbol in CONFIG.CRYPTO_ASSETS) {
                     state.prices[symbol] = CONFIG.CRYPTO_ASSETS[symbol].price;
                     state.cryptoOwned[symbol] = 0;
                     state.priceHistory[symbol] = Array(CONFIG.CHART_HISTORY_LENGTH).fill(CONFIG.CRYPTO_ASSETS[symbol].price);
+                    state.candleData[symbol] = [];
+                    state.purchasePrices[symbol] = [];
+                    lastPrices[symbol] = CONFIG.CRYPTO_ASSETS[symbol].price;
+                    
+                    // Initialize candle data
+                    for (let i = 0; i < CONFIG.CHART_HISTORY_LENGTH; i++) {
+                        const basePrice = CONFIG.CRYPTO_ASSETS[symbol].price;
+                        const variance = basePrice * 0.01;
+                        state.candleData[symbol].push({
+                            open: basePrice,
+                            close: basePrice,
+                            high: basePrice + variance,
+                            low: basePrice - variance
+                        });
+                    }
                 }
+            },
+
+            reset() {
+                // Reset achievements too
+                for (const key in CONFIG.ACHIEVEMENTS) {
+                    CONFIG.ACHIEVEMENTS[key].unlocked = false;
+                }
+                this.resetState();
+                this.saveGame();
                 this.updateDisplay();
+                this.renderAchievements();
+                this.updateHoldingsList();
+                this.renderTradeHistory();
             },
 
             setupEventListeners() {
-                elements.buyBtn.addEventListener('click', () => this.buy());
-                elements.sellBtn.addEventListener('click', () => this.sell());
+                elements.buyBtn.addEventListener('click', () => {
+                    AudioSystem.init();
+                    this.buy();
+                });
+                elements.sellBtn.addEventListener('click', () => {
+                    AudioSystem.init();
+                    this.sell();
+                });
                 elements.resetBtn.addEventListener('click', () => {
-                    this.showNotification('Game Reset', 'Your portfolio has been reset to the starting values.');
+                    this.showNotification('🔄', 'Game Reset', 'Your portfolio has been reset to the starting values.');
                     this.reset();
                     this.selectCrypto(state.currentCrypto);
+                });
+                elements.soundBtn.addEventListener('click', () => {
+                    soundEnabled = !soundEnabled;
+                    elements.soundBtn.textContent = soundEnabled ? '🔊 Sound' : '🔇 Muted';
+                    AudioSystem.init();
                 });
                 elements.cryptoSelector.addEventListener('click', (e) => {
                     const button = e.target.closest('.crypto-button');
@@ -266,16 +733,62 @@
                         this.hideNotification();
                     }
                 });
+                
+                // Quick amount buttons
+                document.querySelectorAll('.quick-amount-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const percent = parseInt(btn.dataset.percent);
+                        const maxBuyAmount = state.balance / state.prices[state.currentCrypto];
+                        const amount = (maxBuyAmount * percent / 100).toFixed(6);
+                        elements.cryptoAmountInput.value = amount;
+                    });
+                });
+                
+                // Chart type toggle
+                elements.chartBar.addEventListener('click', () => {
+                    chartType = 'bar';
+                    elements.chartBar.classList.add('active');
+                    elements.chartCandle.classList.remove('active');
+                    elements.chartCandle.classList.add('bg-gray-700', 'text-gray-300');
+                    this.renderChart();
+                });
+                elements.chartCandle.addEventListener('click', () => {
+                    chartType = 'candle';
+                    elements.chartCandle.classList.add('active');
+                    elements.chartBar.classList.remove('active');
+                    elements.chartBar.classList.add('bg-gray-700', 'text-gray-300');
+                    this.renderChart();
+                });
+                
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'b' || e.key === 'B') {
+                        if (document.activeElement !== elements.cryptoAmountInput) {
+                            this.buy();
+                        }
+                    } else if (e.key === 's' || e.key === 'S') {
+                        if (document.activeElement !== elements.cryptoAmountInput) {
+                            this.sell();
+                        }
+                    }
+                });
             },
 
             update() {
                 this.fluctuatePrices();
                 this.updateDisplay();
+                this.checkPortfolioAchievements();
+                this.saveGame();
             },
 
             fluctuatePrices() {
+                // Store last prices for animation
+                for (const symbol in state.prices) {
+                    lastPrices[symbol] = state.prices[symbol];
+                }
+                
                 // Random event chance
-                if (Math.random() < 0.05) { // 5% chance for a major news event
+                if (Math.random() < 0.05) {
                     const event = CONFIG.NEWS_EVENTS[Math.floor(Math.random() * CONFIG.NEWS_EVENTS.length)];
                     elements.newsTicker.textContent = event.message;
                     for (const symbol in event.effect) {
@@ -283,57 +796,338 @@
                             state.prices[symbol] *= event.effect[symbol];
                         }
                     }
+                    state.sentiment = Math.max(0, Math.min(100, state.sentiment + event.sentiment));
                 } else {
-                    // Normal fluctuations
+                    // Normal fluctuations with momentum
                     for (const symbol in CONFIG.CRYPTO_ASSETS) {
                         const volatility = CONFIG.CRYPTO_ASSETS[symbol].volatility;
-                        const changePercent = 2 * volatility * (Math.random() - 0.5);
+                        const sentimentBias = (state.sentiment - 50) / 1000;
+                        const changePercent = 2 * volatility * (Math.random() - 0.5 + sentimentBias);
                         state.prices[symbol] *= (1 + changePercent);
-                        state.prices[symbol] = Math.max(0.01, state.prices[symbol]); // Prevent price from going to zero
+                        state.prices[symbol] = Math.max(0.01, state.prices[symbol]);
                     }
+                    
+                    // Slowly normalize sentiment
+                    state.sentiment += (50 - state.sentiment) * 0.01;
                 }
 
-                // Update price history for all cryptos
+                // Update price history and candle data
                 for (const symbol in state.prices) {
-                    state.priceHistory[symbol].push(state.prices[symbol]);
+                    const price = state.prices[symbol];
+                    state.priceHistory[symbol].push(price);
                     if (state.priceHistory[symbol].length > CONFIG.CHART_HISTORY_LENGTH) {
                         state.priceHistory[symbol].shift();
                     }
+                    
+                    // Update candle data
+                    const lastCandle = state.candleData[symbol][state.candleData[symbol].length - 1];
+                    const newCandle = {
+                        open: lastCandle ? lastCandle.close : price,
+                        close: price,
+                        high: lastCandle ? Math.max(lastCandle.high, price) : price,
+                        low: lastCandle ? Math.min(lastCandle.low, price) : price
+                    };
+                    state.candleData[symbol].push(newCandle);
+                    if (state.candleData[symbol].length > CONFIG.CHART_HISTORY_LENGTH) {
+                        state.candleData[symbol].shift();
+                    }
+                }
+                
+                // Track volume
+                state.volume += Math.random() * 100000;
+                
+                // Check diamond hands achievement
+                const portfolioValue = this.calculatePortfolioValue();
+                if (portfolioValue < state.peakPortfolioValue * 0.8) {
+                    this.checkAchievement('diamondHands');
+                }
+                if (portfolioValue > state.peakPortfolioValue) {
+                    state.peakPortfolioValue = portfolioValue;
                 }
             },
 
             buy() {
                 const amount = parseFloat(elements.cryptoAmountInput.value);
                 if (isNaN(amount) || amount <= 0) {
-                    return this.showNotification('Invalid Amount', 'Please enter a positive number to buy.');
+                    AudioSystem.play('error');
+                    return this.showNotification('❌', 'Invalid Amount', 'Please enter a positive number to buy.');
                 }
 
                 const cost = state.prices[state.currentCrypto] * amount;
                 if (cost > state.balance) {
-                    return this.showNotification('Insufficient Funds', `You need ${this.formatCurrency(cost)} but only have ${this.formatCurrency(state.balance)}.`);
+                    AudioSystem.play('error');
+                    return this.showNotification('💸', 'Insufficient Funds', `You need ${this.formatCurrency(cost)} but only have ${this.formatCurrency(state.balance)}.`);
+                }
+
+                // Check if going all in
+                if (cost >= state.balance * 0.99) {
+                    this.checkAchievement('allIn');
                 }
 
                 state.balance -= cost;
                 state.cryptoOwned[state.currentCrypto] += amount;
+                state.purchasePrices[state.currentCrypto].push({
+                    amount: amount,
+                    price: state.prices[state.currentCrypto]
+                });
+                
+                // Add to trade history
+                this.addTradeHistory('BUY', state.currentCrypto, amount, cost);
+                
+                // Update stats
+                state.stats.totalTrades++;
+                
+                // Check achievements
+                this.checkAchievement('firstTrade');
+                if (cost >= 5000) this.checkAchievement('bigSpender');
+                if (state.cryptoOwned['BTC'] >= 1) this.checkAchievement('whale');
+                if (state.stats.totalTrades >= 50) this.checkAchievement('dayTrader');
+                this.checkDiversifiedAchievement();
+                
                 elements.cryptoAmountInput.value = '';
+                AudioSystem.play('buy');
+                this.showToast(`Bought ${amount.toFixed(4)} ${state.currentCrypto}!`, 'green');
                 this.updateDisplay();
+                this.updateHoldingsList();
+                this.renderTradeHistory();
+                this.saveGame();
             },
 
             sell() {
                 const amount = parseFloat(elements.cryptoAmountInput.value);
                 if (isNaN(amount) || amount <= 0) {
-                    return this.showNotification('Invalid Amount', 'Please enter a positive number to sell.');
+                    AudioSystem.play('error');
+                    return this.showNotification('❌', 'Invalid Amount', 'Please enter a positive number to sell.');
                 }
 
                 if (amount > state.cryptoOwned[state.currentCrypto]) {
-                    return this.showNotification('Not Enough Crypto', `You can't sell more ${state.currentCrypto} than you own.`);
+                    AudioSystem.play('error');
+                    return this.showNotification('📉', 'Not Enough Crypto', `You can't sell more ${state.currentCrypto} than you own.`);
                 }
 
                 const value = state.prices[state.currentCrypto] * amount;
+                
+                // Calculate profit/loss
+                const avgPurchasePrice = this.getAveragePurchasePrice(state.currentCrypto);
+                const purchaseCost = avgPurchasePrice * amount;
+                const profitLoss = value - purchaseCost;
+                
+                // Update stats
+                state.stats.totalTrades++;
+                if (profitLoss > 0) {
+                    state.stats.winningTrades++;
+                    if (profitLoss > state.stats.biggestGain) {
+                        state.stats.biggestGain = profitLoss;
+                    }
+                    // Check moonshot
+                    if (profitLoss >= purchaseCost) {
+                        this.checkAchievement('moonshot');
+                    }
+                } else {
+                    state.stats.lossCount++;
+                    if (profitLoss < state.stats.biggestLoss) {
+                        state.stats.biggestLoss = profitLoss;
+                    }
+                    if (state.stats.lossCount >= 5) {
+                        this.checkAchievement('paperHands');
+                    }
+                }
+                
                 state.balance += value;
                 state.cryptoOwned[state.currentCrypto] -= amount;
+                state.lastSellTime = Date.now();
+                
+                // Update purchase prices array
+                this.updatePurchasePricesAfterSell(state.currentCrypto, amount);
+                
+                // Add to trade history
+                this.addTradeHistory('SELL', state.currentCrypto, amount, value, profitLoss);
+                
+                // Check achievements
+                this.checkAchievement('firstTrade');
+                if (value >= 5000) this.checkAchievement('bigSpender');
+                if (state.stats.totalTrades >= 50) this.checkAchievement('dayTrader');
+                
                 elements.cryptoAmountInput.value = '';
+                AudioSystem.play('sell');
+                const plText = profitLoss >= 0 ? `+${this.formatCurrency(profitLoss)}` : this.formatCurrency(profitLoss);
+                this.showToast(`Sold ${amount.toFixed(4)} ${state.currentCrypto}! (${plText})`, profitLoss >= 0 ? 'green' : 'red');
                 this.updateDisplay();
+                this.updateHoldingsList();
+                this.renderTradeHistory();
+                this.saveGame();
+            },
+            
+            getAveragePurchasePrice(symbol) {
+                const purchases = state.purchasePrices[symbol];
+                if (!purchases || purchases.length === 0) return state.prices[symbol];
+                
+                let totalCost = 0;
+                let totalAmount = 0;
+                purchases.forEach(p => {
+                    totalCost += p.amount * p.price;
+                    totalAmount += p.amount;
+                });
+                return totalAmount > 0 ? totalCost / totalAmount : state.prices[symbol];
+            },
+            
+            updatePurchasePricesAfterSell(symbol, soldAmount) {
+                let remaining = soldAmount;
+                while (remaining > 0 && state.purchasePrices[symbol].length > 0) {
+                    const first = state.purchasePrices[symbol][0];
+                    if (first.amount <= remaining) {
+                        remaining -= first.amount;
+                        state.purchasePrices[symbol].shift();
+                    } else {
+                        first.amount -= remaining;
+                        remaining = 0;
+                    }
+                }
+            },
+            
+            addTradeHistory(type, symbol, amount, value, profitLoss = null) {
+                const trade = {
+                    type,
+                    symbol,
+                    amount,
+                    value,
+                    profitLoss,
+                    price: state.prices[symbol],
+                    time: new Date().toLocaleTimeString()
+                };
+                state.tradeHistory.unshift(trade);
+                if (state.tradeHistory.length > 20) {
+                    state.tradeHistory.pop();
+                }
+            },
+            
+            renderTradeHistory() {
+                if (state.tradeHistory.length === 0) {
+                    elements.tradeHistory.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No trades yet</p>';
+                    return;
+                }
+                
+                elements.tradeHistory.innerHTML = state.tradeHistory.slice(0, 10).map(trade => {
+                    const color = trade.type === 'BUY' ? 'text-green-400' : 'text-red-400';
+                    const icon = trade.type === 'BUY' ? '📈' : '📉';
+                    let plText = '';
+                    if (trade.profitLoss !== null) {
+                        const plColor = trade.profitLoss >= 0 ? 'text-green-400' : 'text-red-400';
+                        plText = `<span class="${plColor} text-xs">(${trade.profitLoss >= 0 ? '+' : ''}${this.formatCurrency(trade.profitLoss)})</span>`;
+                    }
+                    return `
+                        <div class="bg-[#0a192f] p-2 rounded text-xs">
+                            <div class="flex justify-between items-center">
+                                <span class="${color} font-semibold">${icon} ${trade.type}</span>
+                                <span class="text-gray-500">${trade.time}</span>
+                            </div>
+                            <div class="flex justify-between items-center mt-1">
+                                <span class="text-gray-400">${trade.amount.toFixed(4)} ${trade.symbol}</span>
+                                <span class="text-white">${this.formatCurrency(trade.value)}</span>
+                            </div>
+                            ${plText ? `<div class="text-right">${plText}</div>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            },
+            
+            updateHoldingsList() {
+                let html = '';
+                for (const symbol in CONFIG.CRYPTO_ASSETS) {
+                    const owned = state.cryptoOwned[symbol];
+                    if (owned > 0) {
+                        const value = owned * state.prices[symbol];
+                        const avgPrice = this.getAveragePurchasePrice(symbol);
+                        const pl = (state.prices[symbol] - avgPrice) * owned;
+                        const plPercent = ((state.prices[symbol] - avgPrice) / avgPrice * 100);
+                        const plColor = pl >= 0 ? 'text-green-400' : 'text-red-400';
+                        
+                        html += `
+                            <div class="bg-[#0a192f] p-2 rounded">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-semibold text-white">${CONFIG.CRYPTO_ASSETS[symbol].icon} ${symbol}</span>
+                                    <span class="text-gray-300">${owned.toFixed(4)}</span>
+                                </div>
+                                <div class="flex justify-between items-center text-xs mt-1">
+                                    <span class="text-gray-500">${this.formatCurrency(value)}</span>
+                                    <span class="${plColor}">${pl >= 0 ? '+' : ''}${plPercent.toFixed(1)}%</span>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+                elements.holdingsList.innerHTML = html || '<p class="text-gray-500 text-sm text-center py-2">No holdings</p>';
+            },
+            
+            checkDiversifiedAchievement() {
+                let count = 0;
+                for (const symbol in state.cryptoOwned) {
+                    if (state.cryptoOwned[symbol] > 0) count++;
+                }
+                if (count >= 3) {
+                    this.checkAchievement('diversified');
+                }
+            },
+            
+            checkPortfolioAchievements() {
+                const portfolioValue = this.calculatePortfolioValue();
+                if (portfolioValue >= 1000000) {
+                    this.checkAchievement('millionaire');
+                }
+                if (portfolioValue <= CONFIG.STARTING_BALANCE * 0.5) {
+                    this.checkAchievement('rekt');
+                }
+            },
+            
+            calculatePortfolioValue() {
+                let total = state.balance;
+                for (const symbol in state.cryptoOwned) {
+                    total += state.cryptoOwned[symbol] * state.prices[symbol];
+                }
+                return total;
+            },
+            
+            checkAchievement(key) {
+                if (CONFIG.ACHIEVEMENTS[key] && !CONFIG.ACHIEVEMENTS[key].unlocked) {
+                    CONFIG.ACHIEVEMENTS[key].unlocked = true;
+                    this.showAchievementPopup(key);
+                    this.renderAchievements();
+                    AudioSystem.play('achievement');
+                }
+            },
+            
+            showAchievementPopup(key) {
+                const achievement = CONFIG.ACHIEVEMENTS[key];
+                elements.achievementIcon.textContent = achievement.icon;
+                elements.achievementName.textContent = achievement.name;
+                elements.achievementDesc.textContent = achievement.desc;
+                elements.achievementPopup.style.opacity = '1';
+                elements.achievementPopup.style.pointerEvents = 'auto';
+                
+                setTimeout(() => {
+                    elements.achievementPopup.style.opacity = '0';
+                    elements.achievementPopup.style.pointerEvents = 'none';
+                }, 3000);
+            },
+            
+            renderAchievements() {
+                elements.achievements.innerHTML = '';
+                for (const key in CONFIG.ACHIEVEMENTS) {
+                    const a = CONFIG.ACHIEVEMENTS[key];
+                    const div = document.createElement('div');
+                    div.className = `text-center p-2 rounded ${a.unlocked ? 'bg-yellow-500/20' : 'bg-gray-800/50 opacity-50'}`;
+                    div.title = `${a.name}: ${a.desc}`;
+                    div.innerHTML = `<span class="text-2xl ${a.unlocked ? '' : 'grayscale'}">${a.icon}</span>`;
+                    elements.achievements.appendChild(div);
+                }
+            },
+            
+            showToast(message, color = 'green') {
+                elements.toastMessage.textContent = message;
+                elements.toast.className = `toast bg-${color}-500 text-white font-semibold shadow-lg show`;
+                setTimeout(() => {
+                    elements.toast.classList.remove('show');
+                }, 2000);
             },
 
             selectCrypto(symbol) {
@@ -347,31 +1141,105 @@
                 const crypto = CONFIG.CRYPTO_ASSETS[state.currentCrypto];
                 const price = state.prices[state.currentCrypto];
                 const owned = state.cryptoOwned[state.currentCrypto];
+                const assetValue = owned * price;
 
                 elements.balance.textContent = this.formatCurrency(state.balance);
                 elements.cryptoOwned.textContent = owned.toFixed(4);
+                elements.assetValue.textContent = this.formatCurrency(assetValue);
                 elements.currentPrice.textContent = this.formatCurrency(price);
                 elements.cryptoName.textContent = crypto.name;
                 elements.cryptoSymbol.textContent = state.currentCrypto;
+                elements.cryptoIcon.textContent = crypto.icon;
+                
+                // Volatility badge
+                const vol = crypto.volatility;
+                elements.volatilityBadge.textContent = vol <= 0.03 ? 'Low' : vol <= 0.06 ? 'Medium' : 'High';
+                elements.volatilityBadge.className = vol <= 0.03 ? 'text-green-400' : vol <= 0.06 ? 'text-yellow-400' : 'text-red-400';
+                
+                // Price animation
+                const lastPrice = lastPrices[state.currentCrypto] || price;
+                if (price > lastPrice) {
+                    elements.priceContainer.classList.remove('pulse-red');
+                    elements.priceContainer.classList.add('pulse-green');
+                } else if (price < lastPrice) {
+                    elements.priceContainer.classList.remove('pulse-green');
+                    elements.priceContainer.classList.add('pulse-red');
+                }
+                setTimeout(() => {
+                    elements.priceContainer.classList.remove('pulse-green', 'pulse-red');
+                }, 500);
+
+                // Portfolio totals
+                const portfolioValue = this.calculatePortfolioValue();
+                const pnl = portfolioValue - CONFIG.STARTING_BALANCE;
+                const pnlPercent = (pnl / CONFIG.STARTING_BALANCE) * 100;
+                
+                elements.totalPortfolio.textContent = this.formatCurrency(portfolioValue);
+                elements.totalPnl.textContent = (pnl >= 0 ? '+' : '') + this.formatCurrency(pnl);
+                elements.totalPnl.className = `text-2xl font-bold ${pnl >= 0 ? 'text-green-400' : 'text-red-400'}`;
+                elements.totalPnlPercent.textContent = (pnlPercent >= 0 ? '+' : '') + pnlPercent.toFixed(2) + '%';
+                elements.totalPnlPercent.className = `text-2xl font-bold ${pnlPercent >= 0 ? 'text-green-400' : 'text-red-400'}`;
+                
+                // Sentiment gauge
+                elements.sentimentGauge.style.width = `${state.sentiment}%`;
+                
+                // Stats
+                elements.statTrades.textContent = state.stats.totalTrades;
+                elements.statWins.textContent = state.stats.winningTrades;
+                elements.statBest.textContent = this.formatCurrency(state.stats.biggestGain);
+                elements.statWorst.textContent = this.formatCurrency(Math.abs(state.stats.biggestLoss));
 
                 this.updatePriceChange();
+                this.updatePriceStats();
+                this.updateTrendIndicator();
                 this.renderChart();
             },
 
             updatePriceChange() {
                 const history = state.priceHistory[state.currentCrypto];
                 if (history.length < 2) return;
+                
                 const oldPrice = history[history.length - 2];
                 const newPrice = history[history.length - 1];
                 const change = ((newPrice - oldPrice) / oldPrice) * 100;
+                
+                // Calculate 24h change (using all history as proxy)
+                const oldestPrice = history[0];
+                const change24h = ((newPrice - oldestPrice) / oldestPrice) * 100;
 
-                elements.priceChange.textContent = `${change.toFixed(2)}%`;
-                if (change >= 0) {
-                    elements.priceChange.classList.remove('text-red-400');
-                    elements.priceChange.classList.add('text-green-400');
+                elements.priceChange.textContent = `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
+                elements.priceChange.className = `font-semibold ${change >= 0 ? 'text-green-400' : 'text-red-400'}`;
+                
+                elements.priceChange24h.textContent = `(24h: ${change24h >= 0 ? '+' : ''}${change24h.toFixed(2)}%)`;
+                elements.priceChange24h.className = `text-xs ${change24h >= 0 ? 'text-green-400' : 'text-red-400'}`;
+            },
+            
+            updatePriceStats() {
+                const history = state.priceHistory[state.currentCrypto];
+                const high = Math.max(...history);
+                const low = Math.min(...history);
+                const avg = history.reduce((a, b) => a + b, 0) / history.length;
+                
+                elements.priceHigh.textContent = this.formatCurrency(high);
+                elements.priceLow.textContent = this.formatCurrency(low);
+                elements.priceAvg.textContent = this.formatCurrency(avg);
+                elements.tradeVolume.textContent = this.formatCompactNumber(state.volume);
+            },
+            
+            updateTrendIndicator() {
+                const history = state.priceHistory[state.currentCrypto];
+                const recent = history.slice(-10);
+                const trend = recent[recent.length - 1] - recent[0];
+                
+                if (trend > 0) {
+                    elements.trendIndicator.textContent = '↑ Bullish';
+                    elements.trendIndicator.className = 'text-xs px-2 py-1 rounded bg-green-500/20 text-green-400';
+                } else if (trend < 0) {
+                    elements.trendIndicator.textContent = '↓ Bearish';
+                    elements.trendIndicator.className = 'text-xs px-2 py-1 rounded bg-red-500/20 text-red-400';
                 } else {
-                    elements.priceChange.classList.remove('text-green-400');
-                    elements.priceChange.classList.add('text-red-400');
+                    elements.trendIndicator.textContent = '→ Neutral';
+                    elements.trendIndicator.className = 'text-xs px-2 py-1 rounded bg-gray-500/20 text-gray-400';
                 }
             },
 
@@ -380,9 +1248,9 @@
                 for (const symbol in CONFIG.CRYPTO_ASSETS) {
                     const crypto = CONFIG.CRYPTO_ASSETS[symbol];
                     const button = document.createElement('button');
-                    button.className = 'crypto-button p-3 rounded-lg font-bold transition-colors duration-200';
+                    button.className = 'crypto-button p-2 rounded-lg font-bold transition-all duration-200 text-sm';
                     button.dataset.crypto = symbol;
-                    button.textContent = symbol;
+                    button.innerHTML = `<span class="block text-lg">${crypto.icon}</span><span class="text-xs">${symbol}</span>`;
                     elements.cryptoSelector.appendChild(button);
                 }
             },
@@ -391,35 +1259,83 @@
                 document.querySelectorAll('.crypto-button').forEach(btn => {
                     if (btn.dataset.crypto === state.currentCrypto) {
                         btn.classList.add('bg-[#64ffda]', 'text-[#0a192f]');
-                        btn.classList.remove('bg-gray-800/50', 'text-gray-300', 'hover:bg-gray-700/70');
+                        btn.classList.remove('bg-[#0a192f]', 'text-gray-300', 'hover:bg-gray-700/70');
                     } else {
                         btn.classList.remove('bg-[#64ffda]', 'text-[#0a192f]');
-                        btn.classList.add('bg-gray-800/50', 'text-gray-300', 'hover:bg-gray-700/70');
+                        btn.classList.add('bg-[#0a192f]', 'text-gray-300', 'hover:bg-gray-700/70');
                     }
                 });
             },
 
             renderChart() {
                 elements.priceChart.innerHTML = '';
+                
+                if (chartType === 'bar') {
+                    this.renderBarChart();
+                } else {
+                    this.renderCandleChart();
+                }
+            },
+            
+            renderBarChart() {
                 const history = state.priceHistory[state.currentCrypto];
                 const maxPrice = Math.max(...history);
                 const minPrice = Math.min(...history);
 
-                history.forEach(price => {
+                history.forEach((price, index) => {
                     const bar = document.createElement('div');
                     const heightPercent = maxPrice === minPrice ? 50 : ((price - minPrice) / (maxPrice - minPrice)) * 100;
-                    bar.style.height = `${Math.max(1, heightPercent)}%`;
-                    bar.className = 'w-full rounded-sm transition-all duration-300 ease-out';
+                    bar.style.height = `${Math.max(2, heightPercent)}%`;
+                    bar.className = 'flex-1 min-w-[3px] rounded-t transition-all duration-300 ease-out';
                     
-                    // Color the bar based on its relation to the previous bar
-                    const lastPrice = history[history.indexOf(price) - 1] || price;
-                    bar.style.backgroundColor = price >= lastPrice ? '#22c55e' : '#ef4444'; // green or red
+                    const lastPrice = history[index - 1] || price;
+                    bar.style.backgroundColor = price >= lastPrice ? '#22c55e' : '#ef4444';
                     
                     elements.priceChart.appendChild(bar);
                 });
             },
+            
+            renderCandleChart() {
+                const candles = state.candleData[state.currentCrypto];
+                if (!candles || candles.length === 0) return;
+                
+                const allPrices = candles.flatMap(c => [c.high, c.low]);
+                const maxPrice = Math.max(...allPrices);
+                const minPrice = Math.min(...allPrices);
+                const range = maxPrice - minPrice || 1;
 
-            showNotification(title, message) {
+                candles.forEach(candle => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'candlestick flex-1';
+                    
+                    const isGreen = candle.close >= candle.open;
+                    const color = isGreen ? '#22c55e' : '#ef4444';
+                    
+                    const highPercent = ((candle.high - minPrice) / range) * 100;
+                    const lowPercent = ((candle.low - minPrice) / range) * 100;
+                    const openPercent = ((candle.open - minPrice) / range) * 100;
+                    const closePercent = ((candle.close - minPrice) / range) * 100;
+                    
+                    const wickTop = 100 - highPercent;
+                    const wickHeight = highPercent - lowPercent;
+                    const bodyTop = 100 - Math.max(openPercent, closePercent);
+                    const bodyHeight = Math.abs(closePercent - openPercent);
+                    
+                    wrapper.innerHTML = `
+                        <div class="relative w-full h-full">
+                            <div class="candlestick-wick absolute left-1/2 transform -translate-x-1/2" 
+                                 style="top: ${wickTop}%; height: ${wickHeight}%; background-color: ${color}"></div>
+                            <div class="candlestick-body absolute left-0" 
+                                 style="top: ${bodyTop}%; height: ${Math.max(2, bodyHeight)}%; background-color: ${color}; width: 100%"></div>
+                        </div>
+                    `;
+                    
+                    elements.priceChart.appendChild(wrapper);
+                });
+            },
+
+            showNotification(icon, title, message) {
+                elements.modalIcon.textContent = icon;
                 elements.modalTitle.textContent = title;
                 elements.modalMessage.textContent = message;
                 elements.notificationModal.classList.add('visible');
@@ -436,6 +1352,13 @@
                     currency: 'USD',
                     maximumFractionDigits: value < 1 ? 6 : 2
                 });
+            },
+            
+            formatCompactNumber(value) {
+                if (value >= 1000000000) return `$${(value / 1000000000).toFixed(1)}B`;
+                if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
+                if (value >= 1000) return `$${(value / 1000).toFixed(1)}K`;
+                return `$${value.toFixed(0)}`;
             }
         };
 
